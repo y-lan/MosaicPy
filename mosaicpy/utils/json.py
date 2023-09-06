@@ -1,9 +1,20 @@
 import json
 
 
-def load_jsonl(file_path):
+def load_jsonl(file_path, cb_func=None, skip_none=False):
     with open(file_path, 'r') as f:
-        return [json.loads(line) for line in f]
+        data = []
+        for line in f:
+            line = json.loads(line)
+
+            if cb_func is not None:
+                line = cb_func(line)
+
+            if skip_none and line is None:
+                continue
+
+            data.append(line)
+        return data
 
 
 def dump_jsonl(file_path, data):
