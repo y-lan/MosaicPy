@@ -4,9 +4,24 @@ import time
 import pytz
 
 
-def parse_unixtime(epoch, format="%Y-%m-%d %H:%M:%S") -> str:
+def parse_unixtime(epoch, format="%Y-%m-%d %H:%M:%S", timezone=None) -> str:
     local_time = time.localtime(epoch)
+
     readable_time = time.strftime(format, local_time)
+
+    utc_dt = datetime.utcfromtimestamp(epoch).replace(tzinfo=pytz.utc)
+
+    if timezone:
+        try:
+            target_tz = pytz.timezone(timezone)
+            localized_dt = utc_dt.astimezone(target_tz)
+        except Exception as e:
+            raise ValueError(f"Invalid timezone: {e}")
+    else:
+        localized_dt = utc_dt
+
+    readable_time = localized_dt.strftime(format)
+
     return readable_time
 
 
