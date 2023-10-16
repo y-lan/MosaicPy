@@ -1,5 +1,6 @@
 
 
+import time
 import openai
 
 
@@ -15,6 +16,7 @@ class ChatOpenAI:
                  max_tokens=1024,
                  generate_n=1,
                  callback=None,
+                 max_retry=16,
                  **kwargs):
 
         # if kwargs is not None, loop it to format the user_input
@@ -24,13 +26,20 @@ class ChatOpenAI:
         msgs = [{"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": user_input}]
 
-        completion = openai.ChatCompletion.create(
-            model=self.model_name,
-            messages=msgs,
-            max_tokens=max_tokens,
-            n=generate_n,
-            temperature=temperature if temperature is not None else self.temperature,
-        )
+        for _ in range(max_retry):
+            try:
+                completion = openai.ChatCompletion.create(
+                    model=self.model_name,
+                    messages=msgs,
+                    max_tokens=max_tokens,
+                    n=generate_n,
+                    temperature=temperature if temperature is not None else self.temperature,
+                )
+                break
+            except openai.error.RateLimitError:
+                time.sleep(2 ** _)
+        else:
+            raise Exception("Max retries exceeded")
 
         res = completion.choices
 
