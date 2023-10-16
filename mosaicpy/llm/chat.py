@@ -12,8 +12,9 @@ class ChatOpenAI:
 
     def complete(self, user_input,
                  temperature=None,
-                 generate_n=1,
                  max_tokens=1024,
+                 generate_n=1,
+                 callback=None,
                  **kwargs):
 
         # if kwargs is not None, loop it to format the user_input
@@ -34,6 +35,12 @@ class ChatOpenAI:
         res = completion.choices
 
         if generate_n == 1:
-            return res[0]['message']['content']
+            res = res[0]['message']['content']
+            if callback is not None:
+                res = callback(res)
         else:
-            return [r['message']['content'] for r in res]
+            res = [r['message']['content'] for r in res]
+            if callback is not None:
+                res = [callback(r) for r in res]
+
+        return res

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 
 import pytz
@@ -45,3 +45,25 @@ def to_unixtime(dt: str, format: str = None, timezone: str = 'UTC') -> int:
         dt = pytz.timezone(timezone).localize(dt)
     epoch = int(dt.timestamp())
     return epoch
+
+
+def date_add(dt: str, delta: int):
+    '''
+    dt: yyyy-mm-dd
+    delta: days
+    '''
+
+    dt = datetime.strptime(dt, "%Y-%m-%d")
+    dt = dt + timedelta(days=delta)
+    return dt.strftime("%Y-%m-%d")
+
+
+def date_diff(end: str, start: str):
+    '''
+    end: yyyy-mm-dd
+    start: yyyy-mm-dd
+    '''
+
+    end = datetime.strptime(end, "%Y-%m-%d")
+    start = datetime.strptime(start, "%Y-%m-%d")
+    return (end - start).days
