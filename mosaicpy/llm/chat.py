@@ -2,6 +2,7 @@
 
 import time
 import openai
+from openai.error import Timeout
 
 
 class ChatOpenAI:
@@ -17,6 +18,7 @@ class ChatOpenAI:
                  generate_n=1,
                  callback=None,
                  max_retry=16,
+                 timeout=60,
                  **kwargs):
 
         # if kwargs is not None, loop it to format the user_input
@@ -34,10 +36,13 @@ class ChatOpenAI:
                     max_tokens=max_tokens,
                     n=generate_n,
                     temperature=temperature if temperature is not None else self.temperature,
+                    timeout=timeout
                 )
                 break
             except openai.error.RateLimitError:
                 time.sleep(2 ** _)
+            except Timeout:
+                pass
         else:
             raise Exception("Max retries exceeded")
 
