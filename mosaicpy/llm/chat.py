@@ -5,21 +5,21 @@ import openai
 from openai.error import Timeout
 
 
-class ChatOpenAI:
-    def __init__(self, system_prompt='You are an helpful assistant.',
+class OpenAIBot:
+    def __init__(self, sys='You are a helpful assistant.',
                  model_name='gpt-3.5-turbo-16k', temperature=0.1):
-        self.system_prompt = system_prompt
+        self.system_prompt = sys
         self.model_name = model_name
         self.temperature = temperature
 
-    def complete(self, user_input,
-                 temperature=None,
-                 max_tokens=1024,
-                 generate_n=1,
-                 callback=None,
-                 max_retry=16,
-                 timeout=60,
-                 **kwargs):
+    def chat(self, user_input,
+             temperature=None,
+             max_tokens=1024,
+             generate_n=1,
+             callback=None,
+             max_retry=16,
+             timeout=60,
+             **kwargs):
 
         # if kwargs is not None, loop it to format the user_input
         if kwargs is not None:
