@@ -8,6 +8,10 @@ def dict(**kwargs):
 
 def groupby(collection, key_func):
     result = {}
+
+    if isinstance(key_func, str):
+        def key_func(x): return x[key_func]
+
     for item in collection:
         key = key_func(item)
         if key not in result:
