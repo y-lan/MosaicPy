@@ -21,3 +21,18 @@ def dump_jsonl(file_path, data):
     with open(file_path, 'w') as f:
         for line in data:
             f.write(json.dumps(line) + '\n')
+
+
+def load_pickle(file_path, default=None):
+    import pickle
+    try:
+        with open(file_path, 'rb') as f:
+            return pickle.load(f)
+    except FileNotFoundError:
+        return default
+
+
+def dump_pickle(file_path, data):
+    import pickle
+    with open(file_path, 'wb') as f:
+        pickle.dump(data, f)

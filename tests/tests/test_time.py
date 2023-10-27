@@ -23,6 +23,15 @@ class TestTimeFunctions(unittest.TestCase):
         assert parse_unixtime(1641009600, format="%Y-%m-%d %H:%M:%S.%f", timezone="Asia/Shanghai") == "2022-01-01 12:00:00.000000"
         assert parse_unixtime(1641049200, format="%Y-%m-%dT%H:%M:%S%z", timezone="Asia/Omsk") == "2022-01-01T21:00:00+0600"
 
+    def test_time_it(self):
+        from mosaicpy.utils.time import time_it
+
+        @time_it
+        def my_function(x):
+            return x * 2
+
+        result = my_function(2)
+        self.assertEqual(result, 4)
 
 if __name__ == "__main__":
     unittest.main()

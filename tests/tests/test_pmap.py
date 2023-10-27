@@ -1,6 +1,5 @@
 import unittest
-# Replace 'your_module' with the actual module name
-from mosaicpy.concurrent import parallel_map, parallel_map_lite
+from mosaicpy.collections import pmap
 
 
 def my_function(x):
@@ -10,38 +9,47 @@ def my_function(x):
 class TestParallelMapLite(unittest.TestCase):
 
     def test_single_worker(self):
-        result = parallel_map_lite(range(5), my_function, workers=1)
+        result = pmap(range(5), my_function, workers=1)
         self.assertEqual(result, [0, 2, 4, 6, 8])
 
     def test_multiple_workers(self):
-        result = parallel_map_lite(range(5), my_function, workers=2)
+        result = pmap(range(5), my_function, workers=2)
+        self.assertEqual(result, [0, 2, 4, 6, 8])
+
+    def test_progress_bar(self):
+        result = pmap(range(5), my_function, workers=2, show_progress=True)
         self.assertEqual(result, [0, 2, 4, 6, 8])
 
     def test_negative_workers(self):
-        result = parallel_map_lite(range(5), my_function)
+        result = pmap(range(5), my_function)
         self.assertEqual(result, [0, 2, 4, 6, 8])
 
     def test_empty_collection(self):
-        result = parallel_map_lite([], my_function)
+        result = pmap([], my_function)
         self.assertEqual(result, [])
 
 
 class TestParallelMap(unittest.TestCase):
 
     def test_single_worker(self):
-        result = parallel_map(range(5), my_function, workers=1)
+        result = pmap(range(5), my_function, workers=1, use_process=True)
         self.assertEqual(result, [0, 2, 4, 6, 8])
 
     def test_multiple_workers(self):
-        result = parallel_map(range(5), my_function, workers=2)
+        result = pmap(range(5), my_function, workers=2, use_process=True)
+        self.assertEqual(result, [0, 2, 4, 6, 8])
+
+    def test_progress_bar(self):
+        result = pmap(range(5), my_function, workers=2,
+                      use_process=True, show_progress=True)
         self.assertEqual(result, [0, 2, 4, 6, 8])
 
     def test_negative_workers(self):
-        result = parallel_map(range(5), my_function)
+        result = pmap(range(5), my_function, use_process=True)
         self.assertEqual(result, [0, 2, 4, 6, 8])
 
     def test_empty_collection(self):
-        result = parallel_map([], my_function)
+        result = pmap([], my_function, use_process=True)
         self.assertEqual(result, [])
 
 

@@ -1,6 +1,6 @@
 import unittest
 import os
-from mosaicpy.utils.json import load_jsonl, dump_jsonl
+from mosaicpy.utils.file import load_jsonl, dump_jsonl
 
 
 class TestJsonlFunctions(unittest.TestCase):

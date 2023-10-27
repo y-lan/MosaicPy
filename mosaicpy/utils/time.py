@@ -67,3 +67,13 @@ def date_diff(end: str, start: str):
     end = datetime.strptime(end, "%Y-%m-%d")
     start = datetime.strptime(start, "%Y-%m-%d")
     return (end - start).days
+
+
+def time_it(func):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(f"{func.__name__} took {end - start:.4f} seconds")
+        return result
+    return wrapper
