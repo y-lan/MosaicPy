@@ -6,11 +6,13 @@ def dict(**kwargs):
     return kwargs
 
 
-def groupby(collection, key_func):
+def groupby(collection, key_or_func):
     result = {}
 
-    if isinstance(key_func, str):
-        def key_func(x): return x[key_func]
+    if isinstance(key_or_func, str):
+        def key_func(x): return x[key_or_func]
+    else:
+        key_func = key_or_func
 
     for item in collection:
         key = key_func(item)
