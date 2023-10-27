@@ -6,6 +6,17 @@ def dict(**kwargs):
     return kwargs
 
 
+def groupby(collection, key_func):
+    result = {}
+    for item in collection:
+        key = key_func(item)
+        if key not in result:
+            result[key] = []
+        result[key].append(item)
+
+    return result
+
+
 def sample(collection, n, seed=None):
     import random
     if seed is not None:
