@@ -1,3 +1,10 @@
+def sample(collection, n, seed=None):
+    import random
+    if seed is not None:
+        random.seed(seed)
+    return random.sample(collection, n)
+
+
 def pmap(collection, map_func,
          workers=-1, use_process=False,
          show_progress=False):
