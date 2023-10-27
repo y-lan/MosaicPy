@@ -1,8 +1,37 @@
+from collections.abc import Iterable
+import itertools
+
+
 def sample(collection, n, seed=None):
     import random
     if seed is not None:
         random.seed(seed)
-    return random.sample(collection, n)
+
+    total_items = len(collection)
+    if n >= total_items:
+        return collection
+
+    if isinstance(collection, dict):
+        keys = iter(collection.keys())
+
+        sampled_dict = {}
+        sampled_indices = sorted(random.sample(range(len(collection)), n))
+        cur_i = 0
+        for i in sampled_indices:
+            next_key = next(itertools.islice(
+                keys, i - cur_i, i - cur_i + 1))
+            sampled_dict[next_key] = collection[next_key]
+            cur_i = i + 1
+
+        return sampled_dict
+    elif isinstance(collection, set):
+        indices = random.sample(range(len(collection)), n)
+        return set([x for i, x in enumerate(collection) if i in indices])
+
+    elif isinstance(collection, Iterable):
+        return random.sample(collection, n)
+    else:
+        raise TypeError("Input collection must be a list, set, or dictionary.")
 
 
 def pmap(collection, map_func,

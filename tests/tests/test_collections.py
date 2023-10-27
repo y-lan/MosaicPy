@@ -1,5 +1,5 @@
 import unittest
-from mosaicpy.collections import pmap
+from mosaicpy.collections import pmap, sample
 
 
 def my_function(x):
@@ -51,6 +51,16 @@ class TestParallelMap(unittest.TestCase):
     def test_empty_collection(self):
         result = pmap([], my_function, use_process=True)
         self.assertEqual(result, [])
+
+
+class TestSample(unittest.TestCase):
+    def test_sample(self):
+        d_dict = dict({str(x): x for x in range(10)})
+        d_list = list(range(10))
+        d_set = set(range(10))
+        self.assertEqual(len(sample(d_dict, 3)), 3)
+        self.assertEqual(len(sample(d_list, 3)), 3)
+        self.assertEqual(len(sample(d_set, 3)), 3)
 
 
 if __name__ == "__main__":
