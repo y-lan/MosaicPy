@@ -2,6 +2,10 @@ from collections.abc import Iterable
 import itertools
 
 
+def dict(**kwargs):
+    return kwargs
+
+
 def sample(collection, n, seed=None):
     import random
     if seed is not None:
