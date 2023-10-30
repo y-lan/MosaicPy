@@ -1,3 +1,4 @@
+import builtins
 from collections.abc import Iterable
 import itertools
 
@@ -32,7 +33,7 @@ def sample(collection, n, seed=None):
     if n >= total_items:
         return collection
 
-    if isinstance(collection, dict):
+    if isinstance(collection, builtins.dict):
         keys = iter(collection.keys())
 
         sampled_dict = {}
