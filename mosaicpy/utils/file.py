@@ -17,7 +17,7 @@ def load_jsonl(file_path, cb_func=None, skip_none=False):
         return data
 
 
-def dump_jsonl(file_path, data):
+def dump_jsonl(data, file_path):
     with open(file_path, 'w') as f:
         for line in data:
             f.write(json.dumps(line) + '\n')
@@ -32,7 +32,7 @@ def load_pickle(file_path, default=None):
         return default
 
 
-def dump_pickle(file_path, data):
+def dump_pickle(data, file_path):
     import pickle
     with open(file_path, 'wb') as f:
         pickle.dump(data, f)
