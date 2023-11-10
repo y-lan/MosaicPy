@@ -56,8 +56,11 @@ def sample(collection, n, seed=None):
         raise TypeError("Input collection must be a list, set, or dictionary.")
 
 
-def pmap(collection, map_func,
-         workers=-1, use_process=False,
+def pmap(collection,
+         map_func,
+         workers=-1,
+         use_process=False,
+         collect_as_dict=False,
          show_progress=False):
     if show_progress:
         from tqdm import tqdm
@@ -71,11 +74,10 @@ def pmap(collection, map_func,
         with multiprocessing.Pool(workers) as pool:
 
             if show_progress:
-                result = list(
+                results = list(
                     tqdm(pool.imap(map_func, collection), total=len(collection)))
             else:
-                result = pool.map(map_func, collection)
-            return result
+                results = pool.map(map_func, collection)
     else:
         from concurrent.futures import ThreadPoolExecutor
 
@@ -85,8 +87,12 @@ def pmap(collection, map_func,
 
         with ThreadPoolExecutor(max_workers=workers) as executor:
             if show_progress:
-                result = list(tqdm(executor.map(map_func, collection),
-                                   total=len(collection)))
+                results = list(tqdm(executor.map(map_func, collection),
+                                    total=len(collection)))
             else:
-                result = list(executor.map(map_func, collection))
-        return result
+                results = list(executor.map(map_func, collection))
+
+    if collect_as_dict:
+        return {k: v for k, v in zip(collection, results)}
+
+    return results

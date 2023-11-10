@@ -1,4 +1,4 @@
-def setup_notebook(auto_reload=True):
+def setup(auto_reload=True):
     from IPython import get_ipython
     ipython = get_ipython()
 
