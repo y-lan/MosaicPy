@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mosaicpy"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["lan <lanyuyang@gmail.com>"]
 readme = "README.md"
