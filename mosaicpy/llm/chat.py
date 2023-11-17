@@ -2,7 +2,6 @@ import base64
 import os
 import time
 import openai
-from openai.error import Timeout
 import urllib
 from mosaicpy.collections import dict as mdict
 
@@ -73,7 +72,7 @@ class OpenAIBot:
 
         for _ in range(max_retry):
             try:
-                completion = openai.ChatCompletion.create(
+                completion = openai.chat.completions.create(
                     model=self.model_name,
                     messages=msgs,
                     max_tokens=max_tokens,
@@ -82,9 +81,9 @@ class OpenAIBot:
                     timeout=timeout
                 )
                 break
-            except openai.error.RateLimitError:
+            except openai.RateLimitError:
                 time.sleep(2 ** _)
-            except Timeout:
+            except openai.APITimeoutError:
                 pass
         else:
             raise Exception("Max retries exceeded")
@@ -92,11 +91,11 @@ class OpenAIBot:
         res = completion.choices
 
         if generate_n == 1:
-            res = res[0]['message']['content']
+            res = res[0].message.content
             if callback is not None:
                 res = callback(res)
         else:
-            res = [r['message']['content'] for r in res]
+            res = [r.message.content for r in res]
             if callback is not None:
                 res = [callback(r) for r in res]
 
