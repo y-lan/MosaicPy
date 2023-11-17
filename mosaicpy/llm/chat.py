@@ -26,6 +26,13 @@ def _create_image_content(image_path):
                     "url": f"data:image/jpeg;base64,{base64_image}"
                 },
             }
+    elif image_path.startswith("data:image/jpeg;base64,"):
+        return {
+            "type": "image_url",
+            "image_url": {
+                "url": image_path
+            },
+        }
     else:
         raise Exception(f"Invalid image path: {image_path}")
 
