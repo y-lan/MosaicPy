@@ -3,6 +3,8 @@ import os
 import time
 import openai
 import urllib
+
+from pydantic import BaseModel
 from mosaicpy.collections import dict as mdict
 
 
@@ -37,6 +39,11 @@ def _create_image_content(image_path):
         raise Exception(f"Invalid image path: {image_path}")
 
 
+class TokenUsage(BaseModel):
+    prompt: int = 0
+    completion: int = 0
+
+
 class OpenAIBot:
     def __init__(self,
                  sys='You are a helpful assistant.',
@@ -48,6 +55,7 @@ class OpenAIBot:
         self.temperature = temperature
         self.keep_conversation_state = keep_conversation_state
         self.conversation_state = []
+        self.token_usage = TokenUsage()
 
     def _get_system_msg(self):
         return {"role": "system", "content": self.system_prompt}
@@ -111,6 +119,9 @@ class OpenAIBot:
                 user_msg,
                 mdict(role='assistant', content=[mdict(type='text', text=res)])
             ])
+
+        self.token_usage.prompt += completion.usage.prompt_tokens
+        self.token_usage.completion += completion.usage.completion_tokens
 
         return res
 
