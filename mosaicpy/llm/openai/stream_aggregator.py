@@ -59,6 +59,8 @@ class ChoiceAggregator(BaseModel):
     def update(self, choice):
         if choice.finish_reason and not self.finish_reason:
             self.finish_reason = choice.finish_reason
+        elif choice.finish_details and not self.finish_reason:
+            self.finish_reason = choice.finish_details['type']
 
         delta = choice.delta
         if delta.content:
