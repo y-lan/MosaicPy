@@ -133,6 +133,18 @@ class OpenAIAgent:
             event, Event), "event must be an instance of Event enum"
         self.event_manager.subscribe(event, callback)
 
+    def add_ai_history(self, history_message):
+        self.conversation_state.append(
+            mdict(role='assistant', content=[
+                  mdict(type='text', text=history_message)])
+        )
+
+    def add_user_history(self, history_message):
+        self.conversation_state.append(
+            mdict(role='user', content=[
+                  mdict(type='text', text=history_message)])
+        )
+
     def _get_system_msg(self):
         return {"role": "system", "content": self.system_prompt}
 
