@@ -43,14 +43,15 @@ def main(stream: bool = True, verbose: bool = False):
         logger.setLevel(logging.DEBUG)
 
     bot = OpenAIAgent(keep_conversation_state=True,
-                    stream=stream,
-                    tools=[CalculatorTool()]
-                    )
+                      stream=stream,
+                      tools=[CalculatorTool()]
+                      )
 
     if stream:
         bot.subscribe(Event.NEW_CHAT_TOKEN,
                       lambda data: print_ai(data['content'], prefix='', end=''))
-        bot.subscribe(Event.FINISH_CHAT, lambda data: print_ai('', prefix='', end='\n'))
+        bot.subscribe(Event.FINISH_CHAT, lambda data: print_ai(
+            '', prefix='', end='\n'))
     else:
         bot.subscribe(Event.FINISH_CHAT, lambda data: print_ai(
             data['response'], prefix=''))

@@ -11,6 +11,7 @@ from openai.types.chat.chat_completion import Choice
 
 from pydantic import BaseModel
 from mosaicpy.collections import dict as mdict
+from mosaicpy.llm.openai.function import build_function_signature
 from mosaicpy.llm.openai.stream_aggregator import ChunkAggregator
 from mosaicpy.llm.openai.tools import Tool
 from mosaicpy.llm.token import count_openai_token, estimate_request_tokens, estimate_response_tokens
@@ -57,47 +58,6 @@ def _create_image_content(image_path):
 class TokenUsage(BaseModel):
     prompt: int = 0
     completion: int = 0
-
-
-TYPE_MAP = {
-    int: "number",
-    float: "number",
-    str: "string",
-    bool: "boolean",
-    list: "list",
-    dict: "object",
-    tuple: "object",
-    set: "object",
-    frozenset: "object",
-    type(None): "null",
-}
-
-
-def build_function_signature(func: Tool):
-    signature = {
-        "name": func.name,
-        "description": func.description,
-    }
-
-    params = func._run.__annotations__
-
-    exclude_params = set(['return', 'run_manager'])
-
-    signature["parameters"] = {
-        "type": "object",
-        "properties": {
-            param: {
-                "type": TYPE_MAP.get(type_),
-                "description": "The " + param
-            } for param, type_ in params.items() if param not in exclude_params
-        },
-        "required": [param for param in params if param not in exclude_params]
-    }
-
-    return {
-        "type": "function",
-        "function": signature
-    }
 
 
 class OpenAIAgent:
