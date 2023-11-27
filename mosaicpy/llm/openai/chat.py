@@ -5,10 +5,15 @@ import os
 import time
 import openai
 import urllib
+from openai.types import CompletionUsage
+from openai.types.chat import ChatCompletion, ChatCompletionMessage
+from openai.types.chat.chat_completion import Choice
 
 from pydantic import BaseModel
 from mosaicpy.collections import dict as mdict
+from mosaicpy.llm.openai.stream_aggregator import ChunkAggregator
 from mosaicpy.llm.openai.tools import Tool
+from mosaicpy.llm.token import count_openai_token, estimate_request_tokens, estimate_response_tokens
 
 
 logger = logging.getLogger(__name__)
@@ -99,7 +104,9 @@ class OpenAIBot:
                  tools=None,
                  keep_conversation_state=False,
                  max_retry=16,
-                 timeout=60):
+                 timeout=60,
+                 stream=False,
+                 new_token_callbacks=None):
         self.system_prompt = sys
         self.model_name = model_name
         self.temperature = temperature
@@ -107,6 +114,8 @@ class OpenAIBot:
         self.conversation_state = []
         self.max_retry = max_retry
         self.timeout = timeout
+        self.stream = stream
+        self.new_token_callbacks = new_token_callbacks or []
 
         if tools is None:
             self.tools = {}
@@ -118,7 +127,9 @@ class OpenAIBot:
     def _get_system_msg(self):
         return {"role": "system", "content": self.system_prompt}
 
-    def _call_completion(self, msgs, max_tokens, generate_n, temperature, tools=None):
+    def _call_completion(self,
+                         msgs, max_tokens, generate_n, temperature,
+                         tools=None):
         kwargs = {
             "model": self.model_name,
             "messages": msgs,
@@ -131,6 +142,9 @@ class OpenAIBot:
         if tools:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
+
+        if self.stream:
+            kwargs['stream'] = True
 
         logger.debug(f'Request to OpenAI: {kwargs}')
 
@@ -145,8 +159,29 @@ class OpenAIBot:
         else:
             raise Exception("Max retries exceeded")
 
-        self.token_usage.prompt += completion.usage.prompt_tokens
-        self.token_usage.completion += completion.usage.completion_tokens
+        if self.stream:
+            ca = ChunkAggregator()
+
+            for chunk in completion:
+                ca.update(chunk)
+
+            completion = ca.to_chat_completion()
+
+        estimated_usage_prompt = estimate_request_tokens(msgs, tools=tools)
+        estimated_usage_completion = estimate_response_tokens(completion)
+
+        logger.debug(
+                f'Estimated token usage: prompt={estimated_usage_prompt}, completion={estimated_usage_completion}')
+
+        if completion.usage:
+            logger.debug(
+                f'Actual token usage: prompt={completion.usage.prompt_tokens}, completion={completion.usage.completion_tokens}')
+        else:
+            completion.usage = CompletionUsage(
+                completion_tokens=estimated_usage_completion,
+                prompt_tokens=estimated_usage_prompt,
+                total_tokens=estimated_usage_prompt + estimated_usage_completion
+            )
 
         logger.debug(f'Response from OpenAI: {completion}')
 
@@ -179,7 +214,7 @@ class OpenAIBot:
                  for tool in self.tools.values()]
 
         completion = self._call_completion(
-            msgs, max_tokens, generate_n, temperature, tools)
+            msgs, max_tokens, generate_n, temperature, tools=tools)
 
         if completion.choices[0].message.tool_calls:
             msgs.append(completion.choices[0].message)

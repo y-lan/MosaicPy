@@ -36,19 +36,24 @@ logger = logging.getLogger('mosaicpy.llm')
 logger.addHandler(ColorfulLogger())
 
 
-def main(verbose: bool = False):
+def main(stream: bool = True, verbose: bool = False):
     if verbose:
         logger.setLevel(logging.DEBUG)
 
-    bot = OpenAIBot(keep_conversation_state=True, tools=[CalculatorTool()])
+    bot = OpenAIBot(keep_conversation_state=True,
+                    stream=stream,
+                    tools=[CalculatorTool()]
+                    )
 
     while True:
         try:
             user_input = input("You (or 'exit' to quit): ")
-            # Check if the user wants to exit
+            # Check if the user wants to exit or input is empty
             if user_input.lower() == 'exit':
                 print("Exiting the chat...")
                 break
+            elif user_input.strip() == '':
+                continue
         except KeyboardInterrupt:
             print("\nExiting the chat...")
             break
