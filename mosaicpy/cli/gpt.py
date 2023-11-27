@@ -1,9 +1,11 @@
-from mosaicpy.llm.openai.chat import OpenAIBot
+from mosaicpy.llm.openai.chat import OpenAIAgent
 from mosaicpy.llm.openai.tools import CalculatorTool
 
 import logging
 import fire
 from colorama import init, Fore, Style
+
+from mosaicpy.llm.schema import Event
 
 init()
 
@@ -27,9 +29,9 @@ class ColorfulLogger(logging.StreamHandler):
         super(ColorfulLogger, self).emit(record)
 
 
-def print_ai(msg):
-    print(Fore.MAGENTA + Style.BRIGHT + "GPT: " +
-          msg + Style.RESET_ALL, end='\n')
+def print_ai(msg, prefix='GPT: ', end='\n'):
+    print(Fore.MAGENTA + Style.BRIGHT + prefix +
+          msg + Style.RESET_ALL, end=end)
 
 
 logger = logging.getLogger('mosaicpy.llm')
@@ -40,10 +42,18 @@ def main(stream: bool = True, verbose: bool = False):
     if verbose:
         logger.setLevel(logging.DEBUG)
 
-    bot = OpenAIBot(keep_conversation_state=True,
+    bot = OpenAIAgent(keep_conversation_state=True,
                     stream=stream,
                     tools=[CalculatorTool()]
                     )
+
+    if stream:
+        bot.subscribe(Event.NEW_CHAT_TOKEN,
+                      lambda data: print_ai(data['content'], prefix='', end=''))
+        bot.subscribe(Event.FINISH_CHAT, lambda data: print_ai('', prefix='', end='\n'))
+    else:
+        bot.subscribe(Event.FINISH_CHAT, lambda data: print_ai(
+            data['response'], prefix=''))
 
     while True:
         try:
@@ -59,9 +69,9 @@ def main(stream: bool = True, verbose: bool = False):
             break
 
         try:
+            print_ai('')
             # Get the response from the bot
-            response = bot.chat(user_input)
-            print_ai(response)
+            bot.chat(user_input)
         except Exception as e:
             print("An error occurred:", e)
             if verbose:

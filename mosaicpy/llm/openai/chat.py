@@ -14,6 +14,10 @@ from mosaicpy.collections import dict as mdict
 from mosaicpy.llm.openai.stream_aggregator import ChunkAggregator
 from mosaicpy.llm.openai.tools import Tool
 from mosaicpy.llm.token import count_openai_token, estimate_request_tokens, estimate_response_tokens
+from mosaicpy.utils.event import SimpleEventManager
+from mosaicpy.llm.schema import Event
+
+from enum import Enum
 
 
 logger = logging.getLogger(__name__)
@@ -96,7 +100,7 @@ def build_function_signature(func: Tool):
     }
 
 
-class OpenAIBot:
+class OpenAIAgent:
     def __init__(self,
                  sys='You are a helpful assistant.',
                  model_name='gpt-3.5-turbo-16k',
@@ -106,7 +110,7 @@ class OpenAIBot:
                  max_retry=16,
                  timeout=60,
                  stream=False,
-                 new_token_callbacks=None):
+                 ):
         self.system_prompt = sys
         self.model_name = model_name
         self.temperature = temperature
@@ -115,7 +119,7 @@ class OpenAIBot:
         self.max_retry = max_retry
         self.timeout = timeout
         self.stream = stream
-        self.new_token_callbacks = new_token_callbacks or []
+        self.event_manager = SimpleEventManager()
 
         if tools is None:
             self.tools = {}
@@ -123,6 +127,11 @@ class OpenAIBot:
             self.tools = {tool.name: tool for tool in tools}
 
         self.token_usage = TokenUsage()
+
+    def subscribe(self, event, callback):
+        assert isinstance(
+            event, Event), "event must be an instance of Event enum"
+        self.event_manager.subscribe(event, callback)
 
     def _get_system_msg(self):
         return {"role": "system", "content": self.system_prompt}
@@ -160,7 +169,7 @@ class OpenAIBot:
             raise Exception("Max retries exceeded")
 
         if self.stream:
-            ca = ChunkAggregator()
+            ca = ChunkAggregator(event_manger=self.event_manager)
 
             for chunk in completion:
                 ca.update(chunk)
@@ -171,7 +180,7 @@ class OpenAIBot:
         estimated_usage_completion = estimate_response_tokens(completion)
 
         logger.debug(
-                f'Estimated token usage: prompt={estimated_usage_prompt}, completion={estimated_usage_completion}')
+            f'Estimated token usage: prompt={estimated_usage_prompt}, completion={estimated_usage_completion}')
 
         if completion.usage:
             logger.debug(
@@ -193,7 +202,6 @@ class OpenAIBot:
              temperature=None,
              max_tokens=1024,
              generate_n=1,
-             callback=None,
              **kwargs):
 
         # if kwargs is not None, loop it to format the user_input
@@ -240,17 +248,18 @@ class OpenAIBot:
 
         if generate_n == 1:
             res = res[0].message.content
-            if callback is not None:
-                res = callback(res)
         else:
             res = [r.message.content for r in res]
-            if callback is not None:
-                res = [callback(r) for r in res]
 
         if self.keep_conversation_state:
             self.conversation_state.extend([
                 user_msg,
                 mdict(role='assistant', content=[mdict(type='text', text=res)])
             ])
+
+        self.event_manager.publish(Event.FINISH_CHAT,
+                                   prompt_tokens=completion.usage.prompt_tokens,
+                                   completion_tokens=completion.usage.completion_tokens,
+                                   response=res,)
 
         return res

@@ -3,6 +3,9 @@ from openai.types.chat import ChatCompletion, ChatCompletionMessage, ChatComplet
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_message_tool_call import Function
 from pydantic import BaseModel
+from mosaicpy.llm.schema import Event
+
+from mosaicpy.utils.event import SimpleEventManager
 
 
 class ToolCallAggregator(BaseModel):
@@ -44,10 +47,14 @@ class ToolCallAggregator(BaseModel):
 
 
 class ChoiceAggregator(BaseModel):
+    event_manger: Optional[SimpleEventManager] = None
     content: Optional[str] = None
     role: Optional[int] = None
     finish_reason: Optional[str] = None
     tool_calls: Optional[ToolCallAggregator] = None
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def update(self, choice):
         if choice.finish_reason and not self.finish_reason:
@@ -59,6 +66,11 @@ class ChoiceAggregator(BaseModel):
                 self.content = delta.content
             else:
                 self.content += delta.content
+
+            if self.event_manger:
+                self.event_manger.publish(
+                    Event.NEW_CHAT_TOKEN,
+                    content=delta.content)
         if delta.role and not self.role:
             self.role = delta.role
         if delta.tool_calls:
@@ -85,11 +97,15 @@ class ChoiceAggregator(BaseModel):
 
 
 class ChunkAggregator(BaseModel):
+    event_manger: SimpleEventManager = None
     id: Optional[str] = None
     created: Optional[int] = None
     model: Optional[str] = None
     choices: Optional[ChoiceAggregator] = None
     chunk_cnt: int = 0
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def update(self, chunk):
         if chunk.id and not self.id:
@@ -105,7 +121,11 @@ class ChunkAggregator(BaseModel):
 
             for i, choice in enumerate(chunk.choices):
                 if i >= len(self.choices):
-                    self.choices.append(ChoiceAggregator())
+                    self.choices.append(
+                        ChoiceAggregator(
+                            # only emit event for the first choice
+                            event_manger=self.event_manger if i == 0 else None)
+                    )
 
                 self.choices[i].update(choice)
 
