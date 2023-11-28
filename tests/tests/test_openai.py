@@ -9,8 +9,6 @@ from mosaicpy.llm.openai.tools import Tool
 
 class TestOpenAIFunctions(unittest.TestCase):
     def test_build_function_signature(self):
-        print("Test build_function_signature")
-
         class TestSchema(BaseModel):
             a: int = Field(..., description="param a")
             b: Optional[str] = Field("test", description="param b")

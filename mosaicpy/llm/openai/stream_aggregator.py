@@ -15,7 +15,6 @@ class ToolCallAggregator(BaseModel):
     arguments: Optional[str] = None
 
     def update(self, tool_call):
-        print(tool_call)
         if tool_call.id and not self.id:
             self.id = tool_call.id
         if tool_call.type and not self.type:
