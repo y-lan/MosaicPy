@@ -81,6 +81,10 @@ class OpenAIAgent:
         self.stream = stream
         self.event_manager = SimpleEventManager()
 
+        self.support_tools = True
+        if model_name in ('gpt-4-vision-preview'):
+            self.support_tools = False
+
         if tools is None:
             self.tools = {}
         else:
@@ -120,7 +124,7 @@ class OpenAIAgent:
             "timeout": self.timeout,
         }
 
-        if tools:
+        if self.support_tools and tools:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
 
