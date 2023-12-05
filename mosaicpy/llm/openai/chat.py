@@ -100,6 +100,10 @@ class OpenAIAgent:
         if isinstance(event, str):
             event = Event[event.upper()]
 
+        if event == Event.NEW_CHAT_TOKEN and not self.stream:
+            logger.warning(
+                "Event.NEW_CHAT_TOKEN is only available when stream=True")
+
         assert isinstance(
             event, Event), "event must be an instance of Event enum"
         self.event_manager.subscribe(event, callback)
