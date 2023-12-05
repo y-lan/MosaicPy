@@ -70,6 +70,7 @@ class OpenAIAgent:
                  max_retry=16,
                  timeout=60,
                  stream=False,
+                 verbose=False,
                  ):
         self.system_prompt = sys
         self.model_name = model_name
@@ -90,9 +91,15 @@ class OpenAIAgent:
         else:
             self.tools = {tool.name: tool for tool in tools}
 
+        if verbose:
+            logger.setLevel(logging.DEBUG)
+
         self.token_usage = TokenUsage()
 
     def subscribe(self, event, callback):
+        if isinstance(event, str):
+            event = Event[event.upper()]
+
         assert isinstance(
             event, Event), "event must be an instance of Event enum"
         self.event_manager.subscribe(event, callback)
