@@ -14,6 +14,7 @@ from mosaicpy.collections import dict as mdict
 from mosaicpy.llm.openai.function import build_function_signature
 from mosaicpy.llm.openai.stream_aggregator import ChunkAggregator
 from mosaicpy.llm.openai.tools import Tool
+from mosaicpy.llm.prompt import replace_magic_placeholders
 from mosaicpy.llm.token import count_openai_token, estimate_request_tokens, estimate_response_tokens
 from mosaicpy.utils.event import SimpleEventManager
 from mosaicpy.llm.schema import Event
@@ -60,47 +61,53 @@ class TokenUsage(BaseModel):
     completion: int = 0
 
 
-class OpenAIAgent:
-    def __init__(self,
-                 sys='You are a helpful assistant.',
-                 model_name='gpt-3.5-turbo-16k',
-                 temperature=0.1,
-                 tools=None,
-                 keep_conversation_state=False,
-                 max_retry=16,
-                 timeout=60,
-                 stream=False,
-                 verbose=False,
-                 ):
-        self.system_prompt = sys
-        self.model_name = model_name
-        self.temperature = temperature
-        self.keep_conversation_state = keep_conversation_state
-        self.conversation_state = []
-        self.max_retry = max_retry
-        self.timeout = timeout
-        self.stream = stream
-        self.event_manager = SimpleEventManager()
+class AgentConfig(BaseModel):
+    model_name: str = 'gpt-3.5-turbo-16k'
+    system_prompt: str = 'You are a helpful assistant'
+    temperature: float = 0.1
+    tools: list[Tool] = []
+    keep_conversation_state: bool = False
+    max_retry: int = 16
+    timeout: int = 60
+    stream: bool = False
+    enable_magic_placeholders: bool = True
+    execute_tools: bool = True
+    verbose: bool = False
+    support_tools: bool = True
 
-        self.support_tools = True
-        if model_name in ('gpt-4-vision-preview'):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        if self.model_name in ('gpt-4-vision-preview'):
             self.support_tools = False
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
+class OpenAIAgent:
+    def __init__(self, config: AgentConfig = None, tools: list[Tool] = None, **kwargs):
+
+        if config is None:
+            config = AgentConfig(**kwargs)
+
+        if config.verbose:
+            logger.setLevel(logging.DEBUG)
 
         if tools is None:
             self.tools = {}
         else:
             self.tools = {tool.name: tool for tool in tools}
 
-        if verbose:
-            logger.setLevel(logging.DEBUG)
-
+        self.conversation_state = []
+        self.event_manager = SimpleEventManager()
         self.token_usage = TokenUsage()
-
+    
     def subscribe(self, event, callback):
         if isinstance(event, str):
             event = Event[event.upper()]
 
-        if event == Event.NEW_CHAT_TOKEN and not self.stream:
+        if event == Event.NEW_CHAT_TOKEN and not self.config.stream:
             logger.warning(
                 "Event.NEW_CHAT_TOKEN is only available when stream=True")
 
@@ -121,7 +128,10 @@ class OpenAIAgent:
         )
 
     def _get_system_msg(self):
-        return {"role": "system", "content": self.system_prompt}
+        if self.enable_magic_placeholders:
+            return {"role": "system", "content": replace_magic_placeholders(self.system_prompt)}
+        else:
+            return {"role": "system", "content": self.system_prompt}
 
     def _call_completion(self,
                          msgs, max_tokens, generate_n, temperature,
@@ -203,6 +213,7 @@ class OpenAIAgent:
         msgs = [self._get_system_msg()]
         if self.keep_conversation_state:
             msgs.extend(self.conversation_state)
+            self.conversation_state.append(user_msg)
         msgs.append(user_msg)
 
         tools = [build_function_signature(tool)
@@ -213,23 +224,36 @@ class OpenAIAgent:
 
         if completion.choices[0].message.tool_calls:
             msgs.append(completion.choices[0].message)
-            for tool_call in completion.choices[0].message.tool_calls:
-                function_name = tool_call.function.name
-                function_args = json.loads(tool_call.function.arguments)
 
-                res = self.tools[function_name]._run(**function_args)
+            if self.execute_tools:
+                for tool_call in completion.choices[0].message.tool_calls:
+                    function_name = tool_call.function.name
+                    function_args = json.loads(tool_call.function.arguments)
 
-                logger.info(
-                    f'Tool call: {function_name}({function_args}) ->\n###\n{res}\n###')
+                    res = self.tools[function_name]._run(**function_args)
+                    logger.info(
+                        f'Tool call: {function_name}({function_args}) ->\n###\n{res}\n###')
 
-                msgs.append(mdict(
-                    tool_call_id=tool_call.id,
-                    role='tool',
-                    name=function_name,
-                    content=f'{res}'))
+                    msgs.append(mdict(
+                        tool_call_id=tool_call.id,
+                        role='tool',
+                        name=function_name,
+                        content=f'{res}'))
+            else:
+                res = []
+                for tool_call in completion.choices[0].message.tool_calls:
+                    function_name = tool_call.function.name
+                    function_args = json.loads(tool_call.function.arguments)
 
-                completion = self._call_completion(
-                    msgs, max_tokens, generate_n, temperature)
+                    res.append(
+                        f'{function_name}({function_args})'
+                    )
+
+                print('\n'.join(res))
+                return ''
+
+            completion = self._call_completion(
+                msgs, max_tokens, generate_n, temperature)
 
         res = completion.choices
 
@@ -239,10 +263,9 @@ class OpenAIAgent:
             res = [r.message.content for r in res]
 
         if self.keep_conversation_state:
-            self.conversation_state.extend([
-                user_msg,
+            self.conversation_state.append(
                 mdict(role='assistant', content=[mdict(type='text', text=res)])
-            ])
+            )
 
         self.event_manager.publish(Event.FINISH_CHAT,
                                    prompt_tokens=completion.usage.prompt_tokens,

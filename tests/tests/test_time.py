@@ -1,5 +1,6 @@
 from datetime import datetime
 import unittest
+from mosaicpy.annotations import time_it
 from mosaicpy.utils.time import from_unixtime, to_unixtime
 
 
@@ -28,8 +29,6 @@ class TestTimeFunctions(unittest.TestCase):
                              timezone="Asia/Omsk") == "2022-01-01T21:00:00+0600"
 
     def test_time_it(self):
-        from mosaicpy.utils.time import time_it
-
         @time_it
         def my_function(x):
             return x * 2

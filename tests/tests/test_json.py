@@ -15,7 +15,7 @@ class TestJsonlFunctions(unittest.TestCase):
         ]
 
     def test_dump_and_load_jsonl(self):
-        dump_jsonl(self.test_file_path, self.test_data)
+        dump_jsonl(self.test_data, self.test_file_path)
 
         self.assertTrue(os.path.exists(self.test_file_path))
 

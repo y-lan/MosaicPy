@@ -1,4 +1,4 @@
-from mosaicpy.llm.openai.chat import OpenAIAgent
+from mosaicpy.llm.openai.agent import OpenAIAgent
 from mosaicpy.llm.openai.tools import CalculatorTool
 
 import logging
