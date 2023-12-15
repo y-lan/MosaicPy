@@ -163,6 +163,9 @@ class OpenAIAgent:
                 completion = openai.chat.completions.create(**kwargs)
                 break
             except openai.RateLimitError:
+                if self.config.verbose:
+                    logger.warning(
+                        f"Rate limit exceeded. Retrying in {2 ** _} seconds...")
                 time.sleep(2 ** _)
             except openai.APITimeoutError:
                 pass
