@@ -206,7 +206,7 @@ class OpenAIAgent:
              **kwargs):
 
         # if kwargs is not None, loop it to format the user_input
-        if kwargs is not None:
+        if kwargs:
             user_input = user_input.format(**kwargs)
 
         user_msg = {"role": "user", "content": [
