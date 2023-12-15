@@ -62,10 +62,9 @@ class TokenUsage(BaseModel):
 
 
 class AgentConfig(BaseModel):
-    model_name: str = 'gpt-3.5-turbo-16k'
+    model_name: str = 'gpt-3.5-turbo-1106'
     system_prompt: str = 'You are a helpful assistant'
     temperature: float = 0.1
-    tools: list[Tool] = []
     keep_conversation_state: bool = False
     max_retry: int = 16
     timeout: int = 60
@@ -74,6 +73,7 @@ class AgentConfig(BaseModel):
     execute_tools: bool = True
     verbose: bool = False
     support_tools: bool = True
+    json_output: bool = False
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -90,6 +90,7 @@ class OpenAIAgent:
 
         if config is None:
             config = AgentConfig(**kwargs)
+        self.config = config
 
         if config.verbose:
             logger.setLevel(logging.DEBUG)
@@ -102,7 +103,7 @@ class OpenAIAgent:
         self.conversation_state = []
         self.event_manager = SimpleEventManager()
         self.token_usage = TokenUsage()
-    
+
     def subscribe(self, event, callback):
         if isinstance(event, str):
             event = Event[event.upper()]
@@ -128,33 +129,36 @@ class OpenAIAgent:
         )
 
     def _get_system_msg(self):
-        if self.enable_magic_placeholders:
-            return {"role": "system", "content": replace_magic_placeholders(self.system_prompt)}
+        if self.config.enable_magic_placeholders:
+            return {"role": "system", "content": replace_magic_placeholders(self.config.system_prompt)}
         else:
-            return {"role": "system", "content": self.system_prompt}
+            return {"role": "system", "content": self.config.system_prompt}
 
     def _call_completion(self,
                          msgs, max_tokens, generate_n, temperature,
                          tools=None):
         kwargs = {
-            "model": self.model_name,
+            "model": self.config.model_name,
             "messages": msgs,
             "max_tokens": max_tokens,
             "n": generate_n,
-            "temperature": temperature if temperature is not None else self.temperature,
-            "timeout": self.timeout,
+            "temperature": temperature if temperature is not None else self.config.temperature,
+            "timeout": self.config.timeout,
         }
 
-        if self.support_tools and tools:
+        if self.config.support_tools and tools:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
 
-        if self.stream:
+        if self.config.stream:
             kwargs['stream'] = True
+
+        if self.config.json_output:
+            kwargs['response_format'] = {"type": "json_object"}
 
         logger.debug(f'Request to OpenAI: {kwargs}')
 
-        for _ in range(self.max_retry):
+        for _ in range(self.config.max_retry):
             try:
                 completion = openai.chat.completions.create(**kwargs)
                 break
@@ -165,7 +169,7 @@ class OpenAIAgent:
         else:
             raise Exception("Max retries exceeded")
 
-        if self.stream:
+        if self.config.stream:
             ca = ChunkAggregator(event_manger=self.event_manager)
 
             for chunk in completion:
@@ -211,7 +215,7 @@ class OpenAIAgent:
             user_msg['content'].append(_create_image_content(image))
 
         msgs = [self._get_system_msg()]
-        if self.keep_conversation_state:
+        if self.config.keep_conversation_state:
             msgs.extend(self.conversation_state)
             self.conversation_state.append(user_msg)
         msgs.append(user_msg)
@@ -225,7 +229,7 @@ class OpenAIAgent:
         if completion.choices[0].message.tool_calls:
             msgs.append(completion.choices[0].message)
 
-            if self.execute_tools:
+            if self.config.execute_tools:
                 for tool_call in completion.choices[0].message.tool_calls:
                     function_name = tool_call.function.name
                     function_args = json.loads(tool_call.function.arguments)
@@ -262,7 +266,7 @@ class OpenAIAgent:
         else:
             res = [r.message.content for r in res]
 
-        if self.keep_conversation_state:
+        if self.config.keep_conversation_state:
             self.conversation_state.append(
                 mdict(role='assistant', content=[mdict(type='text', text=res)])
             )
