@@ -142,6 +142,9 @@ class OpenAIAgent:
             "max_tokens": max_tokens,
             "n": generate_n,
             "temperature": temperature if temperature is not None else self.config.temperature,
+            "frequency_penalty": self.config.frequency_penalty,
+            "top_p": self.config.top_p,
+            "seed": self.config.seed,
             "timeout": self.config.timeout,
         }
 
