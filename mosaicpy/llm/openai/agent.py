@@ -77,7 +77,7 @@ class AgentConfig(BaseModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        if self.model_name in ('gpt-4-vision-preview'):
+        if self.model_name in ['gpt-4-vision-preview']:
             self.support_tools = False
 
     class Config:
