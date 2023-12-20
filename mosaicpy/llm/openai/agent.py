@@ -6,8 +6,6 @@ import time
 import openai
 import urllib
 from openai.types import CompletionUsage
-from openai.types.chat import ChatCompletion, ChatCompletionMessage
-from openai.types.chat.chat_completion import Choice
 
 from pydantic import BaseModel
 from mosaicpy.collections import dict as mdict
@@ -15,11 +13,9 @@ from mosaicpy.llm.openai.function import build_function_signature
 from mosaicpy.llm.openai.stream_aggregator import ChunkAggregator
 from mosaicpy.llm.openai.tools import Tool
 from mosaicpy.llm.prompt import replace_magic_placeholders
-from mosaicpy.llm.token import count_openai_token, estimate_request_tokens, estimate_response_tokens
+from mosaicpy.llm.token import estimate_request_tokens, estimate_response_tokens
 from mosaicpy.utils.event import SimpleEventManager
 from mosaicpy.llm.schema import Event
-
-from enum import Enum
 
 
 logger = logging.getLogger(__name__)
@@ -74,6 +70,9 @@ class AgentConfig(BaseModel):
     verbose: bool = False
     support_tools: bool = True
     json_output: bool = False
+    frequency_penalty: float = 0
+    top_p: float = 1
+    seed: int = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

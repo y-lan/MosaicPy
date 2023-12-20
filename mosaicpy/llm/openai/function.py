@@ -1,4 +1,3 @@
-from typing import Any
 from mosaicpy.collections import dict as mdict
 from mosaicpy.llm.openai.tools import Tool
 

@@ -68,7 +68,6 @@ class TestSample(unittest.TestCase):
 class TestLists(unittest.TestCase):
     def test_values_to_rank(self):
         scores = [4.5, 8.2, 3.1, 11.0]
-        ranks = values_to_rank(scores)
         self.assertEqual(values_to_rank(scores), [1, 2, 0, 3])
         self.assertEqual(values_to_rank(scores, reverse=True), [2, 1, 3, 0])
         self.assertEqual(values_to_rank(scores, start_rank=1), [2, 3, 1, 4])
