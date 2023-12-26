@@ -17,8 +17,7 @@ def values_to_rank(values, reverse=False, start_rank=0) -> List[int]:
     Returns:
         list: A new list where each item is the rank of the corresponding original value in the sorted ranking.
     """
-    sorted_values = sorted([(v, i)
-                           for i, v in enumerate(values)], reverse=reverse)
+    sorted_values = sorted([(v, i) for i, v in enumerate(values)], reverse=reverse)
     ranks = [0] * len(values)
     for rank, (_, i) in enumerate(sorted_values):
         ranks[i] = rank + start_rank

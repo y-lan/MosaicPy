@@ -26,14 +26,15 @@ def build_function_signature(func: Tool):
     }
 
     # check if func has args method
-    if hasattr(func, 'args_schema') and func.args_schema is not None:
+    if hasattr(func, "args_schema") and func.args_schema is not None:
         schema = func.args_schema.schema()
-        func_signature['parameters']['properties'] = schema['properties']
-        func_signature['parameters']['required'] = schema['required']
+        func_signature["parameters"]["properties"] = schema["properties"]
+        func_signature["parameters"]["required"] = schema["required"]
     else:
         import inspect
+
         _run_signature = inspect.signature(func._run)
-        exclude_params = set(['return', 'run_manager', 'args', 'kwargs'])
+        exclude_params = set(["return", "run_manager", "args", "kwargs"])
 
         params = {}
         required_params = []
@@ -43,17 +44,16 @@ def build_function_signature(func: Tool):
                 continue
 
             type_ = param.annotation
-            assert type_ in TYPE_MAP, f"Unsupported type: {type_} for auto-generation of function signature"
+            assert (
+                type_ in TYPE_MAP
+            ), f"Unsupported type: {type_} for auto-generation of function signature"
 
             params[name] = mdict(type=TYPE_MAP.get(type_))
 
             if param.default == inspect._empty:
                 required_params.append(name)
 
-        func_signature['parameters']['properties'] = params
-        func_signature['parameters']['required'] = required_params
+        func_signature["parameters"]["properties"] = params
+        func_signature["parameters"]["required"] = required_params
 
-    return {
-        "type": "function",
-        "function": func_signature
-    }
+    return {"type": "function", "function": func_signature}

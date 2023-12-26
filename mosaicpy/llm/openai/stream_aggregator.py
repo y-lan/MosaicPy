@@ -36,12 +36,7 @@ class ToolCallAggregator(BaseModel):
 
     def to_tool_call(self):
         return ChatCompletionMessageToolCall(
-            id=self.id,
-            function=Function(
-                arguments=self.arguments,
-                name=self.name
-            ),
-            type=self.type
+            id=self.id, function=Function(arguments=self.arguments, name=self.name), type=self.type
         )
 
 
@@ -58,8 +53,8 @@ class ChoiceAggregator(BaseModel):
     def update(self, choice):
         if choice.finish_reason and not self.finish_reason:
             self.finish_reason = choice.finish_reason
-        elif hasattr(choice, 'finish_details') and choice.finish_details and not self.finish_reason:
-            self.finish_reason = choice.finish_details['type']
+        elif hasattr(choice, "finish_details") and choice.finish_details and not self.finish_reason:
+            self.finish_reason = choice.finish_details["type"]
 
         delta = choice.delta
         if delta.content:
@@ -69,9 +64,7 @@ class ChoiceAggregator(BaseModel):
                 self.content += delta.content
 
             if self.event_manger:
-                self.event_manger.publish(
-                    Event.NEW_CHAT_TOKEN,
-                    content=delta.content)
+                self.event_manger.publish(Event.NEW_CHAT_TOKEN, content=delta.content)
         if delta.role and not self.role:
             self.role = delta.role
         if delta.tool_calls:
@@ -91,9 +84,10 @@ class ChoiceAggregator(BaseModel):
             message=ChatCompletionMessage(
                 content=self.content,
                 role=self.role,
-                tool_calls=[tool_call.to_tool_call(
-                ) for tool_call in self.tool_calls] if self.tool_calls else None,
-            )
+                tool_calls=[tool_call.to_tool_call() for tool_call in self.tool_calls]
+                if self.tool_calls
+                else None,
+            ),
         )
 
 
@@ -125,7 +119,8 @@ class ChunkAggregator(BaseModel):
                     self.choices.append(
                         ChoiceAggregator(
                             # only emit event for the first choice
-                            event_manger=self.event_manger if i == 0 else None)
+                            event_manger=self.event_manger if i == 0 else None
+                        )
                     )
 
                 self.choices[i].update(choice)
@@ -138,5 +133,5 @@ class ChunkAggregator(BaseModel):
             created=self.created,
             model=self.model,
             choices=[choice.to_choice() for choice in self.choices],
-            object="chat.completion"
+            object="chat.completion",
         )

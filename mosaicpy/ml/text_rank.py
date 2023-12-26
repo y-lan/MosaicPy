@@ -9,7 +9,6 @@ def _norm_similarity_matrix(similarity_matrix):
 
 
 class TextRanker:
-
     def __init__(self, damping_factor=0.85, max_iter=100, tol=1e-6):
         self.damping_factor = damping_factor
         self.max_iter = max_iter
@@ -19,8 +18,9 @@ class TextRanker:
         ranks = np.ones(similarity_matrix.shape[0])
 
         for iter in range(self.max_iter):
-            new_ranks = (1 - self.damping_factor) + self.damping_factor * \
-                np.dot(similarity_matrix.T, ranks)
+            new_ranks = (1 - self.damping_factor) + self.damping_factor * np.dot(
+                similarity_matrix.T, ranks
+            )
 
             if np.linalg.norm(new_ranks - ranks, 2) < self.tol:
                 break
@@ -38,8 +38,7 @@ class TextRanker:
 
         for i in range(size):
             for j in range(size):
-                similarity_matrix[i][j] = cosine_similarity(
-                    embeddings[i], embeddings[j])
+                similarity_matrix[i][j] = cosine_similarity(embeddings[i], embeddings[j])
 
         _norm_similarity_matrix(similarity_matrix)
 

@@ -11,7 +11,9 @@ def groupby(collection, key_or_func):
     result = {}
 
     if isinstance(key_or_func, str):
-        def key_func(x): return x[key_or_func]
+
+        def key_func(x):
+            return x[key_or_func]
     else:
         key_func = key_or_func
 
@@ -26,6 +28,7 @@ def groupby(collection, key_or_func):
 
 def sample(collection, n, seed=None):
     import random
+
     if seed is not None:
         random.seed(seed)
 
@@ -40,8 +43,7 @@ def sample(collection, n, seed=None):
         sampled_indices = sorted(random.sample(range(len(collection)), n))
         cur_i = 0
         for i in sampled_indices:
-            next_key = next(itertools.islice(
-                keys, i - cur_i, i - cur_i + 1))
+            next_key = next(itertools.islice(keys, i - cur_i, i - cur_i + 1))
             sampled_dict[next_key] = collection[next_key]
             cur_i = i + 1
 
@@ -56,12 +58,9 @@ def sample(collection, n, seed=None):
         raise TypeError("Input collection must be a list, set, or dictionary.")
 
 
-def pmap(collection,
-         map_func,
-         workers=-1,
-         use_process=False,
-         collect_as_dict=False,
-         show_progress=False):
+def pmap(
+    collection, map_func, workers=-1, use_process=False, collect_as_dict=False, show_progress=False
+):
     if show_progress:
         from tqdm import tqdm
 
@@ -72,10 +71,8 @@ def pmap(collection,
             workers = multiprocessing.cpu_count()
 
         with multiprocessing.Pool(workers) as pool:
-
             if show_progress:
-                results = list(
-                    tqdm(pool.imap(map_func, collection), total=len(collection)))
+                results = list(tqdm(pool.imap(map_func, collection), total=len(collection)))
             else:
                 results = pool.map(map_func, collection)
     else:
@@ -83,12 +80,12 @@ def pmap(collection,
 
         if workers == -1:
             import multiprocessing
+
             workers = multiprocessing.cpu_count()
 
         with ThreadPoolExecutor(max_workers=workers) as executor:
             if show_progress:
-                results = list(tqdm(executor.map(map_func, collection),
-                                    total=len(collection)))
+                results = list(tqdm(executor.map(map_func, collection), total=len(collection)))
             else:
                 results = list(executor.map(map_func, collection))
 

@@ -2,6 +2,6 @@ from mosaicpy.utils.time import get_dt_local
 
 
 def replace_magic_placeholders(prompt: str) -> str:
-    prompt = prompt.replace('__DATE__', get_dt_local('%Y-%m-%d (%a)'))
+    prompt = prompt.replace("__DATE__", get_dt_local("%Y-%m-%d (%a)"))
 
     return prompt

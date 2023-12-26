@@ -24,6 +24,7 @@ class CalculatorTool(Tool):
 
     def _run(self, expr: str):
         import numexpr as ne
+
         result = ne.evaluate(expr)
 
         return result.item()

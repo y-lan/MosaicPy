@@ -8,14 +8,14 @@ def from_unixtime(epoch, format="%Y-%m-%d %H:%M:%S", timezone=None) -> str:
     """
     Convert a Unix epoch time to a formatted string representation.
 
-    The function takes a Unix epoch time and converts it to a human-readable string format. 
+    The function takes a Unix epoch time and converts it to a human-readable string format.
     Optionally, it can also convert the time to a specified timezone.
 
     Parameters:
     epoch (int): The Unix epoch time (number of seconds since January 1, 1970, 00:00:00 UTC).
     format (str, optional): The format string to control the output format of the date and time.
         The default format is "%Y-%m-%d %H:%M:%S", which corresponds to "Year-Month-Day Hour:Minute:Second".
-    timezone (str, optional): A string representing the target timezone (e.g., "America/New_York"). 
+    timezone (str, optional): A string representing the target timezone (e.g., "America/New_York").
         If not specified, UTC is used.
 
     Returns:
@@ -55,7 +55,7 @@ def from_unixtime_jp(epoch, format="%Y-%m-%d %H:%M:%S") -> str:
     return from_unixtime(epoch, format, "Asia/Tokyo")
 
 
-def to_unixtime(dt: str, format: str = None, timezone: str = 'UTC') -> int:
+def to_unixtime(dt: str, format: str = None, timezone: str = "UTC") -> int:
     """
     Converts a datetime string to a Unix timestamp (number of seconds since Jan 1, 1970, UTC).
 
@@ -92,7 +92,7 @@ def to_unixtime(dt: str, format: str = None, timezone: str = 'UTC') -> int:
             case 23:
                 format = "%Y-%m-%d %H:%M:%S.%f"
             case 24:
-                format = '%Y-%m-%dT%H:%M:%S%z'
+                format = "%Y-%m-%dT%H:%M:%S%z"
                 timezone = None
             case _:
                 raise ValueError("Unknown datetime format")
@@ -108,7 +108,7 @@ def to_unixtime_jp(dt: str, format: str = None) -> int:
     return to_unixtime(dt, format, "Asia/Tokyo")
 
 
-def get_dt(tz='UTC', format="%Y-%m-%d"):
+def get_dt(tz="UTC", format="%Y-%m-%d"):
     return datetime.now(pytz.timezone(tz)).strftime(format)
 
 
@@ -117,14 +117,14 @@ def get_dt_local(format="%Y-%m-%d"):
 
 
 def get_dt_jp(format="%Y-%m-%d"):
-    return get_dt('Asia/Tokyo', format)
+    return get_dt("Asia/Tokyo", format)
 
 
 def date_add(dt: str, delta: int):
-    '''
+    """
     dt: yyyy-mm-dd
     delta: days
-    '''
+    """
 
     dt = datetime.strptime(dt, "%Y-%m-%d")
     dt = dt + timedelta(days=delta)
@@ -132,10 +132,10 @@ def date_add(dt: str, delta: int):
 
 
 def date_diff(end: str, start: str):
-    '''
+    """
     end: yyyy-mm-dd
     start: yyyy-mm-dd
-    '''
+    """
 
     end = datetime.strptime(end, "%Y-%m-%d")
     start = datetime.strptime(start, "%Y-%m-%d")
