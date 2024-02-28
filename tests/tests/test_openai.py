@@ -14,8 +14,8 @@ class TestOpenAIFunctions(unittest.TestCase):
             b: Optional[str] = Field("test", description="param b")
 
         class TestTool(Tool):
-            name = "test"
-            description = "test"
+            name: str = "test"
+            description: str = "test"
             args_schema: Type[BaseModel] = TestSchema
 
             def _run(self, a: int, b: str):
@@ -23,20 +23,27 @@ class TestOpenAIFunctions(unittest.TestCase):
 
         signature = build_function_signature(TestTool())
 
+        print(signature)
+
         expected_signature = {
-            'type': 'function',
-            'function': {
-                'name': 'test',
-                'description': 'test',
-                'parameters': {
-                    'type': 'object',
-                    'properties': {
-                        'a': {'title': 'A', 'description': 'param a', 'type': 'integer'},
-                        'b': {'title': 'B', 'description': 'param b', 'default': 'test', 'type': 'string'}
+            "type": "function",
+            "function": {
+                "name": "test",
+                "description": "test",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "a": {"title": "A", "description": "param a", "type": "integer"},
+                        "b": {
+                            "title": "B",
+                            "description": "param b",
+                            "default": "test",
+                            "anyOf": [{"type": "string"}, {"type": "null"}],
+                        },
                     },
-                    'required': ['a']
-                }
-            }
+                    "required": ["a"],
+                },
+            },
         }
         self.assertDictEqual(signature, expected_signature)
 

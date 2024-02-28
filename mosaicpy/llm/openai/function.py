@@ -27,7 +27,7 @@ def build_function_signature(func: Tool):
 
     # check if func has args method
     if hasattr(func, "args_schema") and func.args_schema is not None:
-        schema = func.args_schema.schema()
+        schema = func.args_schema.model_json_schema()
         func_signature["parameters"]["properties"] = schema["properties"]
         func_signature["parameters"]["required"] = schema["required"]
     else:
