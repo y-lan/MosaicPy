@@ -8,7 +8,7 @@ import urllib
 from openai import AzureOpenAI
 from openai.types import CompletionUsage
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from mosaicpy.collections import dict as mdict
 from mosaicpy.llm.openai.function import build_function_signature
 from mosaicpy.llm.openai.stream_aggregator import ChunkAggregator
@@ -77,8 +77,10 @@ class AgentConfig(BaseModel):
         if self.model_name in ["gpt-4-vision-preview"]:
             self.support_tools = False
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        protected_namespaces=(),
+    )
 
 
 class OpenAIAgent:

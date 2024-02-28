@@ -2,7 +2,7 @@ from typing import Optional
 from openai.types.chat import ChatCompletion, ChatCompletionMessage, ChatCompletionMessageToolCall
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_message_tool_call import Function
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from mosaicpy.llm.schema import Event
 
 from mosaicpy.utils.event import SimpleEventManager
@@ -47,8 +47,7 @@ class ChoiceAggregator(BaseModel):
     finish_reason: Optional[str] = None
     tool_calls: Optional[ToolCallAggregator] = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def update(self, choice):
         if choice.finish_reason and not self.finish_reason:
@@ -99,8 +98,7 @@ class ChunkAggregator(BaseModel):
     choices: Optional[ChoiceAggregator] = None
     chunk_cnt: int = 0
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def update(self, chunk):
         if chunk.id and not self.id:
