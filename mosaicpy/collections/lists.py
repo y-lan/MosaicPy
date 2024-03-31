@@ -1,8 +1,27 @@
 from typing import List
 
 
-def sort_by_value(items):
-    return sorted(items, key=lambda x: x[1], reverse=True)
+def sort_by_value(items, reverse: bool = False) -> List:
+    if isinstance(items, dict):
+        return sorted(items.items(), key=lambda x: x[1], reverse=reverse)
+    else:
+        # Assume it's a list of tuples
+        return sorted(items, key=lambda x: x[1], reverse=reverse)
+
+
+def sort_by_scores(items: List, scores: List, reverse: bool = False) -> List:
+    """
+    This function sorts a given list by the value in the corresponding position in another given list (scores).
+
+    Args:
+        items (List): The original list of items.
+        scores (List): The list of scores corresponding to each item.
+        reverse (bool, optional): If True, the items are sorted in descending order. Defaults to False.
+
+    Returns:
+        List: A new list where each item is sorted according to the corresponding score.
+    """
+    return [item for _, item in sorted(zip(scores, items), reverse=reverse)]
 
 
 def values_to_rank(values, reverse=False, start_rank=0) -> List[int]:
@@ -24,16 +43,5 @@ def values_to_rank(values, reverse=False, start_rank=0) -> List[int]:
     return ranks
 
 
-def sort_by_scores(items: List, scores: List, reverse: bool = False) -> List:
-    """
-    This function sorts a given list by the value in the corresponding position in another given list (scores).
-
-    Args:
-        items (List): The original list of items.
-        scores (List): The list of scores corresponding to each item.
-        reverse (bool, optional): If True, the items are sorted in descending order. Defaults to False.
-
-    Returns:
-        List: A new list where each item is sorted according to the corresponding score.
-    """
-    return [item for _, item in sorted(zip(scores, items), reverse=reverse)]
+def flatten(items):
+    return [item for sublist in items for item in sublist]
