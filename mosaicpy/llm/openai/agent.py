@@ -8,15 +8,19 @@ import urllib
 from openai import AzureOpenAI
 from openai.types import CompletionUsage
 
-from pydantic import BaseModel, ConfigDict
 from mosaicpy.collections import dict as mdict
+from mosaicpy.llm import Agent
 from mosaicpy.llm.openai.function import build_function_signature
 from mosaicpy.llm.openai.stream_aggregator import ChunkAggregator
 from mosaicpy.llm.openai.tools import Tool
 from mosaicpy.llm.prompt import replace_magic_placeholders
+from mosaicpy.llm.schema import (
+    BaseConfig,
+    ChatResponse,
+    SimpleMessage,
+    TokenUsage,
+)
 from mosaicpy.llm.token import estimate_request_tokens, estimate_response_tokens
-from mosaicpy.utils.event import SimpleEventManager
-from mosaicpy.llm.schema import Event
 
 
 logger = logging.getLogger(__name__)
@@ -47,27 +51,9 @@ def _create_image_content(image_path):
         raise Exception(f"Invalid image path: {image_path}")
 
 
-class TokenUsage(BaseModel):
-    prompt: int = 0
-    completion: int = 0
-
-
-class AgentConfig(BaseModel):
-    model_name: str = "gpt-3.5-turbo-1106"
-    system_prompt: str = "You are a helpful assistant"
-    temperature: float = 0.1
-    keep_conversation_state: bool = False
-    max_retry: int = 16
-    timeout: int = 60
-    stream: bool = False
-    enable_magic_placeholders: bool = True
-    execute_tools: bool = True
-    verbose: bool = False
-    support_tools: bool = True
-    json_output: bool = False
+class AgentConfig(BaseConfig):
+    model_name: str = "gpt-3.5-turbo-0125"
     frequency_penalty: float = 0
-    top_p: float = 1
-    seed: int = None
     use_azure: bool = False
     azure_endpoint: str = None
 
@@ -77,39 +63,18 @@ class AgentConfig(BaseModel):
         if self.model_name in ["gpt-4-vision-preview"]:
             self.support_tools = False
 
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-        protected_namespaces=(),
-    )
 
+class OpenAIAgent(Agent):
+    ROLE_SYSTEM = "system"
 
-class OpenAIAgent:
     def __init__(self, config: AgentConfig = None, tools: list[Tool] = None, **kwargs):
         if config is None:
             config = AgentConfig(**kwargs)
-        self.config = config
+
+        super().__init__(config=config, tools=tools, **kwargs)
 
         if config.verbose:
             logger.setLevel(logging.DEBUG)
-
-        if tools is None:
-            self.tools = {}
-        else:
-            self.tools = {tool.name: tool for tool in tools}
-
-        self.conversation_state = []
-        self.event_manager = SimpleEventManager()
-        self.token_usage = TokenUsage()
-
-    def subscribe(self, event, callback):
-        if isinstance(event, str):
-            event = Event[event.upper()]
-
-        if event == Event.NEW_CHAT_TOKEN and not self.config.stream:
-            logger.warning("Event.NEW_CHAT_TOKEN is only available when stream=True")
-
-        assert isinstance(event, Event), "event must be an instance of Event enum"
-        self.event_manager.subscribe(event, callback)
 
     def _get_client(self):
         if self.config.use_azure:
@@ -124,32 +89,29 @@ class OpenAIAgent:
         else:
             return openai
 
-    def add_ai_history(self, history_message):
-        self.conversation_state.append(
-            mdict(role="assistant", content=[mdict(type="text", text=history_message)])
-        )
-
-    def add_user_history(self, history_message):
-        self.conversation_state.append(
-            mdict(role="user", content=[mdict(type="text", text=history_message)])
-        )
-
     def _get_system_msg(self):
         if self.config.enable_magic_placeholders:
-            return {
-                "role": "system",
-                "content": replace_magic_placeholders(self.config.system_prompt),
-            }
+            return SimpleMessage.from_text(
+                self.ROLE_SYSTEM, replace_magic_placeholders(self.config.system_prompt)
+            )
         else:
-            return {"role": "system", "content": self.config.system_prompt}
+            return SimpleMessage.from_text(self.ROLE_SYSTEM, self.config.system_prompt)
+
+    def _assemble_request_messages(self, user_contents):
+        msgs = [self._get_system_msg()]
+        if self.config.keep_conversation_state:
+            msgs.extend(self.conversation_state)
+
+        msgs.append(SimpleMessage(role=self.ROLE_USER, content=user_contents))
+        return msgs
 
     def _call_completion(self, msgs, max_tokens, generate_n, temperature, tools=None):
         kwargs = {
             "model": self.config.model_name,
             "messages": msgs,
-            "max_tokens": max_tokens,
+            "max_tokens": max_tokens or self.config.max_tokens,
             "n": generate_n,
-            "temperature": temperature if temperature is not None else self.config.temperature,
+            "temperature": temperature or self.config.temperature,
             "frequency_penalty": self.config.frequency_penalty,
             "top_p": self.config.top_p,
             "seed": self.config.seed,
@@ -213,25 +175,26 @@ class OpenAIAgent:
         return completion
 
     def chat(
-        self, user_input, image=None, temperature=None, max_tokens=1024, generate_n=1, **kwargs
+        self,
+        user_input,
+        image=None,
+        full_response=False,
+        temperature=None,
+        max_tokens=None,
+        **kwargs,
     ):
         # if kwargs is not None, loop it to format the user_input
         if kwargs:
             user_input = user_input.format(**kwargs)
 
-        user_msg = {"role": "user", "content": [mdict(type="text", text=user_input)]}
+        user_contents = [mdict(type="text", text=user_input)]
         if image is not None:
-            user_msg["content"].append(_create_image_content(image))
-
-        msgs = [self._get_system_msg()]
-        if self.config.keep_conversation_state:
-            msgs.extend(self.conversation_state)
-            self.conversation_state.append(user_msg)
-        msgs.append(user_msg)
+            user_contents.append(_create_image_content(image))
+        msgs = self._assemble_request_messages(user_contents)
 
         tools = [build_function_signature(tool) for tool in self.tools.values()]
 
-        completion = self._call_completion(msgs, max_tokens, generate_n, temperature, tools=tools)
+        completion = self._call_completion(msgs, max_tokens, 1, temperature, tools=tools)
 
         if completion.choices[0].message.tool_calls:
             msgs.append(completion.choices[0].message)
@@ -263,25 +226,19 @@ class OpenAIAgent:
                 print("\n".join(res))
                 return ""
 
-            completion = self._call_completion(msgs, max_tokens, generate_n, temperature)
+            completion = self._call_completion(msgs, max_tokens, 1, temperature)
 
-        res = completion.choices
-
-        if generate_n == 1:
-            res = res[0].message.content
-        else:
-            res = [r.message.content for r in res]
-
-        if self.config.keep_conversation_state:
-            self.conversation_state.append(
-                mdict(role="assistant", content=[mdict(type="text", text=res)])
-            )
-
-        self.event_manager.publish(
-            Event.FINISH_CHAT,
-            prompt_tokens=completion.usage.prompt_tokens,
-            completion_tokens=completion.usage.completion_tokens,
-            response=res,
+        response = ChatResponse(
+            content=completion.choices[0].message.content,
+            model=self.config.model_name,
+            finish_reason=completion.choices[0].finish_reason,
+            usage=TokenUsage(
+                prompt=completion.usage.prompt_tokens,
+                completion=completion.usage.completion_tokens,
+            ),
+            input_contents=user_contents,
         )
 
-        return res
+        self.event_manager.publish_finish_chat(response)
+
+        return response if full_response else response.content

@@ -1,10 +1,24 @@
-from typing import Optional, Type
 import unittest
+
+from mosaicpy.llm import get_agent
+from mosaicpy.llm.anthropic.agent import AnthropicAgent
+from mosaicpy.llm.openai.agent import OpenAIAgent
+
+from typing import Optional, Type
 
 from pydantic import BaseModel, Field
 from mosaicpy.llm.openai.function import build_function_signature
 
 from mosaicpy.llm.openai.tools import Tool
+
+
+class TestAgentBasic(unittest.TestCase):
+    def test_init_agent(self):
+        gpt_agent = get_agent("openai")
+        self.assertIsInstance(gpt_agent, OpenAIAgent)
+
+        claude_agent = get_agent("anthropic")
+        self.assertIsInstance(claude_agent, AnthropicAgent)
 
 
 class TestOpenAIFunctions(unittest.TestCase):
@@ -22,8 +36,6 @@ class TestOpenAIFunctions(unittest.TestCase):
                 pass
 
         signature = build_function_signature(TestTool())
-
-        print(signature)
 
         expected_signature = {
             "type": "function",
@@ -46,6 +58,20 @@ class TestOpenAIFunctions(unittest.TestCase):
             },
         }
         self.assertDictEqual(signature, expected_signature)
+
+
+class TestOpenAIAgent(unittest.TestCase):
+    def test_basic(self):
+        agent = OpenAIAgent(system_prompt="output the result only", return_all=True)
+        result = agent.chat("1+2=")
+        self.assertEqual(result, "3")
+
+
+class TestAnthropicAgent(unittest.TestCase):
+    def test_basic(self):
+        agent = AnthropicAgent(system_prompt="output the result only", return_all=True)
+        result = agent.chat("1+2=")
+        self.assertEqual(result, "3")
 
 
 if __name__ == "__main__":

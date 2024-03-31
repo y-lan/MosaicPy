@@ -3,9 +3,8 @@ from openai.types.chat import ChatCompletion, ChatCompletionMessage, ChatComplet
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_message_tool_call import Function
 from pydantic import BaseModel, ConfigDict
-from mosaicpy.llm.schema import Event
+from mosaicpy.llm import LLMEventManager
 
-from mosaicpy.utils.event import SimpleEventManager
 
 
 class ToolCallAggregator(BaseModel):
@@ -41,7 +40,7 @@ class ToolCallAggregator(BaseModel):
 
 
 class ChoiceAggregator(BaseModel):
-    event_manger: Optional[SimpleEventManager] = None
+    event_manager: Optional[LLMEventManager] = None
     content: Optional[str] = None
     role: Optional[int] = None
     finish_reason: Optional[str] = None
@@ -62,8 +61,8 @@ class ChoiceAggregator(BaseModel):
             else:
                 self.content += delta.content
 
-            if self.event_manger:
-                self.event_manger.publish(Event.NEW_CHAT_TOKEN, content=delta.content)
+            if self.event_manager:
+                self.event_manager.publish_new_chat_token(delta.content)
         if delta.role and not self.role:
             self.role = delta.role
         if delta.tool_calls:
@@ -91,7 +90,7 @@ class ChoiceAggregator(BaseModel):
 
 
 class ChunkAggregator(BaseModel):
-    event_manger: SimpleEventManager = None
+    event_manger: LLMEventManager = None
     id: Optional[str] = None
     created: Optional[int] = None
     model: Optional[str] = None
@@ -117,7 +116,7 @@ class ChunkAggregator(BaseModel):
                     self.choices.append(
                         ChoiceAggregator(
                             # only emit event for the first choice
-                            event_manger=self.event_manger if i == 0 else None
+                            event_manager=self.event_manger if i == 0 else None
                         )
                     )
 

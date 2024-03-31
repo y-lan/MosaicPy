@@ -1,3 +1,5 @@
+from functools import partial
+from mosaicpy.llm import get_agent
 from mosaicpy.llm.openai.agent import OpenAIAgent
 from mosaicpy.llm.openai.tools import CalculatorTool
 
@@ -37,24 +39,28 @@ logger = logging.getLogger("mosaicpy.llm")
 logger.addHandler(ColorfulLogger())
 
 
-def main(stream: bool = True, verbose: bool = False):
+def main(provider="openai", stream: bool = True, verbose: bool = False):
     if verbose:
         logger.setLevel(logging.DEBUG)
 
-    bot = OpenAIAgent(keep_conversation_state=True, stream=stream, tools=[CalculatorTool()])
+    bot = get_agent(
+        provider,
+        stream=stream,
+        keep_conversation_state=True,
+        verbose=verbose,
+        tools=[CalculatorTool()],
+    )
+    name = "GPT" if provider == "openai" else "Claude"
 
     if stream:
-        bot.subscribe(
-            Event.NEW_CHAT_TOKEN, lambda data: print_ai(data["content"], prefix="", end="")
-        )
-        bot.subscribe(Event.FINISH_CHAT, lambda data: print_ai("", prefix="", end="\n"))
+        bot.on_new_chat_token(lambda content: print_ai(content, prefix="", end=""))
+        bot.on_finish_chat(lambda response: print_ai("", prefix="", end="\n"))
     else:
-        bot.subscribe(Event.FINISH_CHAT, lambda data: print_ai(data["response"], prefix=""))
+        bot.on_finish_chat(lambda response: print_ai(response.content, prefix=""))
 
     while True:
         try:
             user_input = input("You (or 'exit' to quit): ")
-            # Check if the user wants to exit or input is empty
             if user_input.lower() == "exit":
                 print("Exiting the chat...")
                 break
@@ -65,8 +71,7 @@ def main(stream: bool = True, verbose: bool = False):
             break
 
         try:
-            print_ai("")
-            # Get the response from the bot
+            print_ai("", prefix=f"{name}: ")
             bot.chat(user_input)
         except Exception as e:
             print("An error occurred:", e)
