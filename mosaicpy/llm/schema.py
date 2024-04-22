@@ -10,7 +10,7 @@ class BaseConfig(BaseModel):
     system_prompt: str = "You are a helpful assistant"
 
     # LLM
-    temperature: float = 0.1
+    temperature: float = 0
     top_p: float = 1
     seed: int = None
     max_tokens: int = 1024

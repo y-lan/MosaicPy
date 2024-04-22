@@ -3,8 +3,9 @@ import imghdr
 import logging
 import mimetypes
 import os
+import time
 from typing import Any
-from anthropic import Anthropic
+from anthropic import Anthropic, RateLimitError
 from mosaicpy.collections import dict as mdict
 import urllib
 
@@ -127,6 +128,25 @@ class AnthropicAgent(Agent):
 
         return message
 
+    def _create_message(self, messages, temperature=None, max_tokens=None, retry=5):
+        try:
+            return self._client.messages.create(
+                model=self.config.model_name,
+                system=self._get_system_msg(),
+                messages=messages,
+                stream=self.config.stream,
+                max_tokens=max_tokens or self.config.max_tokens,
+                temperature=temperature or self.config.temperature,
+            )
+        except RateLimitError as e:
+            if retry > 0:
+                backoff_time = 2 ** (5 - retry)
+                logger.warning(f"Rate limit exceeded. Retrying in {backoff_time} seconds.")
+                time.sleep(backoff_time)
+                return self._create_message(messages, max_tokens, retry - 1)
+            else:
+                raise e
+
     def chat(
         self,
         user_input,
@@ -144,13 +164,7 @@ class AnthropicAgent(Agent):
 
         messages = self._assemble_request_messages(user_contents)
 
-        res = self._client.messages.create(
-            model=self.config.model_name,
-            system=self._get_system_msg(),
-            max_tokens=max_tokens or self.config.max_tokens,
-            messages=messages,
-            stream=self.config.stream,
-        )
+        res = self._create_message(messages, max_tokens=max_tokens, temperature=temperature)
 
         message = None
         if self.config.stream:
