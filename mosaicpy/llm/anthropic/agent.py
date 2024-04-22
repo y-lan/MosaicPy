@@ -143,7 +143,9 @@ class AnthropicAgent(Agent):
                 backoff_time = 2 ** (5 - retry)
                 logger.warning(f"Rate limit exceeded. Retrying in {backoff_time} seconds.")
                 time.sleep(backoff_time)
-                return self._create_message(messages, max_tokens, retry - 1)
+                return self._create_message(
+                    messages, temperature=temperature, max_tokens=max_tokens, retry=retry - 1
+                )
             else:
                 raise e
 
